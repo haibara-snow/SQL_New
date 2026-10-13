@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>分站事件流</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body class="shard-page">
+  <header class="shard-topbar">
+    <a class="back-link" id="main-link" href="/" aria-label="回到主站">←</a>
+    <div class="shard-brand">
+      <div class="eyebrow">LIBRARY DATABASE · REPLICA SITE</div>
+      <h1 id="site-title">分站事件流</h1>
+    </div>
+    <div class="stream-status" id="stream-status"><span class="health-dot pending"></span>连接中</div>
+  </header>
+  <main class="shard-main">
+    <section class="site-summary" aria-label="站点状态">
+      <div class="summary-field"><span>站点编号</span><strong id="site-id">—</strong></div>
+      <div class="summary-field"><span>分馆编号</span><strong id="branch-id">—</strong></div>
+      <div class="summary-field database-field"><span>SQLite 数据库</span><strong id="database-path">—</strong></div>
+      <div class="summary-field"><span>数据库记录</span><strong id="row-count">—</strong></div>
+    </section>
+    <section class="event-section" aria-labelledby="events-heading">
+      <div class="section-heading">
+        <div><span class="section-index">LIVE</span><h2 id="events-heading">主站请求事件</h2></div>
+        <button class="quiet-button" id="clear-events" type="button">清空视图</button>
+      </div>
+      <div id="event-list" class="event-list" aria-live="polite">
+        <div class="empty-state">等待主站查询请求。</div>
+      </div>
+    </section>
+  </main>
+  <script src="/static/shard.js" defer></script>
+</body>
+</html>

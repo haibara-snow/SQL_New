@@ -1,0 +1,36 @@
+{
+  "main": {
+    "host": "127.0.0.1",
+    "port": 8000,
+    "url": "http://127.0.0.1:8000",
+    "request_timeout_seconds": 8,
+    "query_timeout_seconds": 5,
+    "max_rows_per_query": 10000
+  },
+  "sites": [
+    {
+      "site_id": "A",
+      "branch_id": 1,
+      "url": "http://127.0.0.1:8001",
+      "host": "127.0.0.1",
+      "port": 8001,
+      "database": "data/site_a.sqlite3"
+    },
+    {
+      "site_id": "B",
+      "branch_id": 2,
+      "url": "http://127.0.0.1:8002",
+      "host": "127.0.0.1",
+      "port": 8002,
+      "database": "data/site_b.sqlite3"
+    },
+    {
+      "site_id": "C",
+      "branch_id": 3,
+      "url": "http://127.0.0.1:8003",
+      "host": "127.0.0.1",
+      "port": 8003,
+      "database": "data/site_c.sqlite3"
+    }
+  ]
+}

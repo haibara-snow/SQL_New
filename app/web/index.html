@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>分布式图书馆数据库</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body class="gateway-page">
+  <header class="topbar">
+    <div class="brand-lockup">
+      <div class="brand-mark" aria-hidden="true">DB</div>
+      <div>
+        <div class="eyebrow">DISTRIBUTED LIBRARY</div>
+        <h1>图书馆 SQL 网关</h1>
+      </div>
+    </div>
+    <div class="cluster-health" id="cluster-health" aria-live="polite">
+      <span class="health-dot pending"></span><span>正在检查站点</span>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <section class="query-section" aria-labelledby="query-heading">
+      <div class="section-heading">
+        <div>
+          <span class="section-index">01</span>
+          <h2 id="query-heading">逻辑查询</h2>
+        </div>
+        <span class="subtle-label" id="main-address">主站</span>
+      </div>
+      <div class="example-row" id="examples" aria-label="示例查询"></div>
+      <label class="sr-only" for="sql-input">SQL 查询</label>
+      <textarea id="sql-input" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="sql-error">SELECT book_id, title, author, status
+FROM books
+WHERE branch_id = 2
+ORDER BY title
+LIMIT 8;</textarea>
+      <div class="query-actions">
+        <div id="query-error" class="query-error" role="alert"></div>
+        <button id="run-query" class="run-button" type="button"><span aria-hidden="true">▶</span> 执行查询</button>
+      </div>
+    </section>
+
+    <section class="result-section" aria-labelledby="result-heading">
+      <div class="section-heading result-heading">
+        <div>
+          <span class="section-index">02</span>
+          <h2 id="result-heading">查询结果</h2>
+        </div>
+        <div class="result-meta" id="result-meta">等待查询</div>
+      </div>
+      <div class="table-wrap" id="result-wrap">
+        <div class="empty-state">执行一条逻辑 SQL，查看跨站点结果。</div>
+      </div>
+    </section>
+
+    <section class="plan-section" aria-labelledby="plan-heading">
+      <div class="section-heading">
+        <div>
+          <span class="section-index">03</span>
+          <h2 id="plan-heading">分布式执行计划</h2>
+        </div>
+        <div id="request-label" class="request-label">尚无 request_id</div>
+      </div>
+      <div id="plan-content" class="plan-content">
+        <div class="empty-state">解析过程、站点裁剪、子查询与合并步骤将在这里显示。</div>
+      </div>
+    </section>
+  </main>
+  <footer class="footer-line">
+    <span>逻辑表：books · readers · loans</span>
+    <span>水平分片：branch_id → A / B / C</span>
+  </footer>
+  <script src="/static/main.js" defer></script>
+</body>
+</html>
