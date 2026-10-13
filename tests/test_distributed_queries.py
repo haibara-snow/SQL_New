@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import sqlite3
 from pathlib import Path
 
 import httpx
@@ -8,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from app.config import Settings, Site
 from app.main import create_main_app, execute_query
-from app.seed import READER_NAMES, TITLES, seed_all
+from app.seed import READER_NAMES, TITLES, seed_all, seed_extended_all
 from app.shard import create_shard_app
 
 
@@ -71,6 +72,27 @@ def setup(tmp_path: Path, unavailable: str | None = None):
     settings = make_settings(tmp_path, unavailable)
     seed_all(settings)
     return settings, AppRouterTransport(settings)
+
+
+def test_extended_seed_rebuilds_consistent_data_for_each_site(tmp_path):
+    settings = make_settings(tmp_path)
+    seed_extended_all(settings)
+    seed_extended_all(settings)
+
+    for site in settings.sites:
+        with TestClient(create_shard_app(settings, site.site_id, site.database)) as client:
+            health = client.get("/api/health").json()
+            assert health["database_rows"] == 473
+        connection = sqlite3.connect(site.database)
+        try:
+            assert connection.execute("SELECT COUNT(*) FROM books").fetchone()[0] == 215
+            assert connection.execute("SELECT COUNT(*) FROM readers").fetchone()[0] == 88
+            assert connection.execute("SELECT COUNT(*) FROM loans").fetchone()[0] == 170
+            assert connection.execute("SELECT COUNT(*) FROM books WHERE status = 'loaned'").fetchone()[0] == 45
+            assert connection.execute("SELECT COUNT(*) FROM loans WHERE return_date IS NULL").fetchone()[0] == 45
+            assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
+        finally:
+            connection.close()
 
 
 def run_query(settings: Settings, transport: AppRouterTransport, sql: str):

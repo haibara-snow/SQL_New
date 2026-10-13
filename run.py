@@ -8,7 +8,7 @@ import sys
 import time
 
 from app.config import load_settings
-from app.seed import seed_all
+from app.seed import seed_extended_all
 
 
 def main() -> int:
@@ -16,7 +16,7 @@ def main() -> int:
     parser.add_argument("--init-only", action="store_true", help="initialize all branch databases and exit")
     args = parser.parse_args()
     settings = load_settings()
-    seed_all(settings)
+    seed_extended_all(settings)
     if args.init_only:
         print("Initialized sample data in each branch database.")
         return 0
