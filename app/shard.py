@@ -13,6 +13,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from app.catalog import BrowseError, browse_table, local_profile
 from app.config import Settings, load_settings
 from app.events import EventBroker
 from app.schema import TABLES
@@ -109,6 +110,28 @@ def create_shard_app(
             "database": str(database),
             "main_url": settings.main_url,
         }
+
+    @app.get("/api/profile")
+    async def profile():
+        try:
+            stats = await asyncio.to_thread(local_profile, database)
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail=f"Database unavailable: {exc}") from exc
+        return {
+            "site_id": site.site_id,
+            "branch_id": site.branch_id,
+            "predicate": f"branch_id = {site.branch_id}",
+            **stats,
+        }
+
+    @app.get("/api/browse")
+    async def browse(table: str, limit: int = 12, offset: int = 0, q: str = ""):
+        try:
+            return await asyncio.to_thread(browse_table, database, table, limit, offset, q)
+        except BrowseError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail=f"Database unavailable: {exc}") from exc
 
     @app.get("/events")
     async def events():

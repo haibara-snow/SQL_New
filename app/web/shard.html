@@ -22,6 +22,25 @@
       <div class="summary-field database-field"><span>SQLite 数据库</span><strong id="database-path">—</strong></div>
       <div class="summary-field"><span>数据库记录</span><strong id="row-count">—</strong></div>
     </section>
+    <section class="browse-section" aria-labelledby="browse-heading">
+      <div class="section-heading">
+        <div><span class="section-index">DATA</span><h2 id="browse-heading">本站数据</h2></div>
+        <div id="browse-meta" class="result-meta">正在读取</div>
+      </div>
+      <div id="local-metrics" class="metric-row local-metrics"></div>
+      <div class="example-row" id="table-tabs" aria-label="本地表"></div>
+      <form id="local-search" class="search-bar">
+        <label class="sr-only" for="local-query">本地检索</label>
+        <input id="local-query" maxlength="40" placeholder="在本站当前表中检索" autocomplete="off">
+        <button class="quiet-button" type="submit">检索</button>
+        <button class="quiet-button" id="prev-page" type="button">上一页</button>
+        <button class="quiet-button" id="next-page" type="button">下一页</button>
+      </form>
+      <div id="browse-error" class="query-error" role="alert"></div>
+      <div class="table-wrap" id="browse-wrap">
+        <div class="empty-state">正在读取本站数据。</div>
+      </div>
+    </section>
     <section class="event-section" aria-labelledby="events-heading">
       <div class="section-heading">
         <div><span class="section-index">LIVE</span><h2 id="events-heading">主站请求事件</h2></div>

@@ -161,10 +161,143 @@ async function checkCluster() {
   }
 }
 
+function renderSearchTable(data) {
+  const wrap = document.querySelector("#search-wrap");
+  if (!data.columns?.length) {
+    wrap.innerHTML = "";
+    return;
+  }
+  const head = data.columns.map((name) => `<th>${escapeHtml(name)}</th>`).join("");
+  const rows = (data.rows || []).map((row) => `<tr>${row.map((value) =>
+    `<td>${value === null ? '<span class="null-value">NULL</span>' : escapeHtml(value)}</td>`
+  ).join("")}</tr>`).join("");
+  wrap.innerHTML = `<div class="table-wrap"><table><thead><tr>${head}</tr></thead><tbody>${rows || ""}</tbody></table></div>`;
+  if (!rows) wrap.innerHTML += `<div class="empty-state">没有匹配的图书。</div>`;
+}
+
+function renderCatalog(data) {
+  const totals = data.totals || {};
+  const metrics = [
+    ["图书", totals.books],
+    ["读者", totals.readers],
+    ["借阅", totals.loans],
+    ["在架", totals.available],
+    ["借出", totals.loaned],
+    ["未归还", totals.open_loans],
+  ];
+  document.querySelector("#catalog-totals").innerHTML = metrics.map(([label, value]) =>
+    `<article class="metric-card"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value ?? "—")}</strong></article>`
+  ).join("");
+  const body = (data.sites || []).map((site) => {
+    if (site.status !== "ok") {
+      return `<tr><td>${escapeHtml(site.site_id)}</td><td>${escapeHtml(site.predicate)}</td><td colspan="6">${escapeHtml(site.error || "不可用")}</td></tr>`;
+    }
+    return `<tr>
+      <td><a href="${escapeHtml(site.url)}/">${escapeHtml(site.site_id)}</a></td>
+      <td>${escapeHtml(site.predicate)}</td>
+      <td>${escapeHtml(site.books)}</td>
+      <td>${escapeHtml(site.readers)}</td>
+      <td>${escapeHtml(site.loans)}</td>
+      <td>${escapeHtml(site.available)}</td>
+      <td>${escapeHtml(site.loaned)}</td>
+      <td>${escapeHtml(site.open_loans)}</td>
+    </tr>`;
+  }).join("");
+  document.querySelector("#catalog-body").innerHTML = body || `<tr><td colspan="8">没有分站。</td></tr>`;
+  document.querySelector("#catalog-sites").innerHTML = (data.sites || []).map((site) => {
+    if (site.status !== "ok") {
+      return `<article class="site-card"><strong>站点 ${escapeHtml(site.site_id)}</strong><p>目录不可用</p></article>`;
+    }
+    const categories = (site.categories || []).slice(0, 4).map((item) =>
+      `<li><span>${escapeHtml(item.category)}</span><b>${escapeHtml(item.books)}</b></li>`
+    ).join("");
+    return `<article class="site-card">
+      <strong>站点 ${escapeHtml(site.site_id)} · ${escapeHtml(site.predicate)}</strong>
+      <ul class="category-list">${categories || "<li><span>无分类</span></li>"}</ul>
+    </article>`;
+  }).join("");
+}
+
+async function loadCatalog() {
+  try {
+    const response = await fetch("/api/catalog");
+    const data = await response.json();
+    renderCatalog(data);
+  } catch (error) {
+    document.querySelector("#catalog-body").innerHTML = `<tr><td colspan="8">${escapeHtml(error.message)}</td></tr>`;
+  }
+}
+
+async function loadHistory() {
+  const host = document.querySelector("#history");
+  try {
+    const response = await fetch("/api/history");
+    const data = await response.json();
+    const items = data.items || [];
+    if (!items.length) {
+      host.innerHTML = `<span class="subtle-label">执行后会保留在主站内存中</span>`;
+      return;
+    }
+    host.innerHTML = items.slice(0, 8).map((item, index) => {
+      const firstLine = String(item.sql || "").trim().split("\n")[0];
+      const mark = item.status === 200 ? "" : " history-failed";
+      return `<button class="example-button history-button${mark}" type="button" data-history="${index}" title="${escapeHtml(item.sql)}">${escapeHtml(firstLine)}</button>`;
+    }).join("");
+    host.querySelectorAll("[data-history]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const item = items[Number(button.dataset.history)];
+        if (!item) return;
+        sqlInput.value = item.sql;
+        queryError.textContent = "";
+      });
+    });
+  } catch {
+    host.innerHTML = `<span class="subtle-label">历史暂时不可用</span>`;
+  }
+}
+
+async function searchBooks(event) {
+  event.preventDefault();
+  const keyword = document.querySelector("#book-query").value.trim();
+  const meta = document.querySelector("#search-meta");
+  const error = document.querySelector("#search-error");
+  error.textContent = "";
+  if (!keyword) {
+    error.textContent = "请输入检索关键字。";
+    return;
+  }
+  meta.textContent = "正在访问全部分站";
+  try {
+    const response = await fetch(`/api/search?q=${encodeURIComponent(keyword)}`);
+    const data = await response.json();
+    if (!response.ok) {
+      error.textContent = data.error || "检索失败。";
+      meta.textContent = `失败 · HTTP ${response.status}`;
+      document.querySelector("#search-wrap").innerHTML = "";
+      return;
+    }
+    const siteNote = (data.sites || []).map((site) => `${site.site_id} ${site.matched}`).join(" · ");
+    meta.textContent = `匹配 ${data.matched} 本 · 显示 ${data.row_count} 行${data.truncated ? " · 已截断" : ""} · ${siteNote}`;
+    renderSearchTable(data);
+  } catch (failure) {
+    error.textContent = `检索请求失败：${failure.message}`;
+    meta.textContent = "通信失败";
+  }
+}
+
 renderExamples();
-runButton.addEventListener("click", executeQuery);
+loadCatalog();
+loadHistory();
+document.querySelector("#refresh-catalog").addEventListener("click", loadCatalog);
+document.querySelector("#book-search").addEventListener("submit", searchBooks);
+runButton.addEventListener("click", async () => {
+  await executeQuery();
+  loadHistory();
+});
 sqlInput.addEventListener("keydown", (event) => {
-  if ((event.ctrlKey || event.metaKey) && event.key === "Enter") executeQuery();
+  if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+    executeQuery().then(loadHistory);
+  }
 });
 checkCluster();
 setInterval(checkCluster, 15000);

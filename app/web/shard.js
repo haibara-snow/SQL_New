@@ -70,5 +70,102 @@ document.querySelector("#clear-events").addEventListener("click", () => {
   eventList.innerHTML = '<div class="empty-state">事件视图已清空，后续事件仍会实时显示。</div>';
   eventCount = 0;
 });
+const tables = [
+  { id: "books", label: "books 图书" },
+  { id: "readers", label: "readers 读者" },
+  { id: "loans", label: "loans 借阅" },
+];
+let currentTable = "books";
+let browseOffset = 0;
+const browseLimit = 8;
+
+function renderBrowse(data) {
+  const wrap = document.querySelector("#browse-wrap");
+  const columns = data.columns || [];
+  const head = columns.map((name) => `<th>${escapeHtml(name)}</th>`).join("");
+  const rows = (data.rows || []).map((row) => `<tr>${row.map((value) =>
+    `<td>${value === null ? '<span class="null-value">NULL</span>' : escapeHtml(value)}</td>`
+  ).join("")}</tr>`).join("");
+  wrap.innerHTML = `<table><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>`;
+  if (!rows) wrap.innerHTML += `<div class="empty-state">当前条件下没有记录。</div>`;
+  const from = data.total ? data.offset + 1 : 0;
+  const to = data.offset + data.row_count;
+  document.querySelector("#browse-meta").textContent = `${data.table} · ${from}–${to} / ${data.total}`;
+  document.querySelector("#prev-page").disabled = data.offset <= 0;
+  document.querySelector("#next-page").disabled = data.offset + data.row_count >= data.total;
+}
+
+async function loadBrowse() {
+  const error = document.querySelector("#browse-error");
+  error.textContent = "";
+  const keyword = document.querySelector("#local-query").value.trim();
+  const params = new URLSearchParams({
+    table: currentTable,
+    limit: String(browseLimit),
+    offset: String(browseOffset),
+  });
+  if (keyword) params.set("q", keyword);
+  try {
+    const response = await fetch(`/api/browse?${params.toString()}`);
+    const data = await response.json();
+    if (!response.ok) {
+      error.textContent = data.detail || "读取失败。";
+      return;
+    }
+    renderBrowse(data);
+  } catch (failure) {
+    error.textContent = `读取本站数据失败：${failure.message}`;
+  }
+}
+
+function renderTableTabs() {
+  document.querySelector("#table-tabs").innerHTML = tables.map((table) =>
+    `<button class="example-button" type="button" data-table="${table.id}" aria-pressed="${table.id === currentTable}">${escapeHtml(table.label)}</button>`
+  ).join("");
+}
+
+document.querySelector("#table-tabs").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-table]");
+  if (!button) return;
+  currentTable = button.dataset.table;
+  browseOffset = 0;
+  renderTableTabs();
+  loadBrowse();
+});
+document.querySelector("#local-search").addEventListener("submit", (event) => {
+  event.preventDefault();
+  browseOffset = 0;
+  loadBrowse();
+});
+document.querySelector("#prev-page").addEventListener("click", () => {
+  browseOffset = Math.max(0, browseOffset - browseLimit);
+  loadBrowse();
+});
+document.querySelector("#next-page").addEventListener("click", () => {
+  browseOffset += browseLimit;
+  loadBrowse();
+});
+
+async function loadProfile() {
+  try {
+    const response = await fetch("/api/profile");
+    if (!response.ok) return;
+    const data = await response.json();
+    const metrics = [
+      ["图书", data.books],
+      ["读者", data.readers],
+      ["借阅", data.loans],
+      ["未归还", data.open_loans],
+    ];
+    document.querySelector("#local-metrics").innerHTML = metrics.map(([label, value]) =>
+      `<article class="metric-card"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></article>`
+    ).join("");
+  } catch { /* 统计失败时仍保留下方表格。 */ }
+}
+
 loadHealth();
+renderTableTabs();
+loadProfile();
+loadBrowse();
 setInterval(loadHealth, 15000);
+setInterval(loadProfile, 15000);

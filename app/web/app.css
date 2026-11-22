@@ -95,6 +95,36 @@ tbody tr:hover { background: #f6faf9; }
 .parsed-sql { margin-bottom: 13px; padding: 9px 10px; border: 1px solid #dce6e4; border-radius: 4px; background: #fff; }
 .parsed-sql span { display: block; margin-bottom: 6px; color: #5d7271; font: 700 10px var(--mono); }
 .parsed-sql pre { margin: 0; overflow: auto; color: #344b55; font: 11px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.catalog-section { padding-bottom: 22px; margin-bottom: 4px; border-bottom: 1px solid var(--line); }
+.section-note { margin: -4px 0 12px; color: var(--muted); font-size: 12px; }
+.metric-row { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+.metric-card { padding: 10px 12px; border: 1px solid var(--line); border-radius: 4px; background: #fff; }
+.metric-card span { color: var(--muted); font: 10px var(--mono); }
+.metric-card strong { display: block; margin-top: 4px; font-size: 18px; font-weight: 680; }
+.catalog-table-wrap { margin-bottom: 10px; }
+.catalog-table-wrap a { color: var(--teal); font-weight: 700; text-decoration: none; }
+.catalog-table-wrap a:hover { text-decoration: underline; }
+.catalog-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+.site-card { padding: 10px 12px; border: 1px solid var(--line); border-radius: 4px; background: #fff; }
+.site-card strong { font: 700 11px var(--mono); }
+.site-card p { margin-top: 6px; color: var(--muted); font-size: 12px; }
+.category-list { display: grid; gap: 4px; margin: 8px 0 0; padding: 0; list-style: none; }
+.category-list li { display: flex; justify-content: space-between; gap: 8px; color: #425459; font-size: 12px; }
+.search-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.search-bar input {
+  flex: 1 1 240px; min-width: 0; height: 36px; padding: 0 12px; border: 1px solid #c8d3d3; border-radius: 4px; outline: none; background: #fff;
+}
+.search-bar input:focus { border-color: var(--teal); box-shadow: 0 0 0 2px rgb(8 127 120 / 12%); }
+.search-button { min-width: 112px; }
+#search-meta { margin-top: 8px; }
+#search-wrap { margin-top: 8px; }
+.history-line { display: flex; align-items: flex-start; gap: 8px; margin: 8px 0 10px; }
+.history-line > .subtle-label { flex: 0 0 auto; padding-top: 7px; }
+.history-line .example-row { flex: 1; margin: 0; }
+.history-button { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-failed { border-color: #e7c4c0; color: var(--red); }
+.local-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.browse-section { margin-top: 18px; }
 .footer-line { display: flex; justify-content: space-between; gap: 12px; padding: 12px max(22px, calc((100vw - 1280px) / 2)); border-top: 1px solid var(--line); color: #748185; font: 10px var(--mono); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
 
@@ -112,6 +142,7 @@ tbody tr:hover { background: #f6faf9; }
 .event-section { margin-top: 23px; }
 .quiet-button { border: 1px solid #cdd8d8; border-radius: 4px; padding: 6px 9px; background: #fff; color: #536468; font-size: 11px; }
 .quiet-button:hover { border-color: var(--teal); color: var(--teal); }
+.quiet-button:disabled { opacity: .45; cursor: default; }
 .event-list { display: grid; gap: 8px; }
 .event-item { display: grid; grid-template-columns: 118px minmax(0, 1fr); border: 1px solid var(--line); border-radius: 4px; background: #fff; }
 .event-time { padding: 11px 12px; border-right: 1px solid #e8eeee; color: #647478; font: 10px/1.5 var(--mono); }
@@ -129,6 +160,8 @@ tbody tr:hover { background: #f6faf9; }
   .cluster-health { font-size: 0; }
   .subtle-label { display: none; }
   .plan-content { grid-template-columns: 1fr; gap: 13px; }
+  .catalog-grid, .metric-row, .local-metrics { grid-template-columns: 1fr 1fr; }
+  .history-line { display: block; }
   .site-summary { grid-template-columns: 1fr 1fr; }
   .summary-field:nth-child(2) { border-right: 0; }
   .summary-field:nth-child(1), .summary-field:nth-child(2) { border-bottom: 1px solid #e6ebeb; }

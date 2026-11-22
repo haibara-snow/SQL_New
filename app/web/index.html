@@ -21,15 +21,50 @@
   </header>
 
   <main class="workspace">
-    <section class="query-section" aria-labelledby="query-heading">
+    <section class="catalog-section" aria-labelledby="catalog-heading">
       <div class="section-heading">
         <div>
           <span class="section-index">01</span>
+          <h2 id="catalog-heading">分片目录</h2>
+        </div>
+        <button id="refresh-catalog" class="quiet-button" type="button">刷新目录</button>
+      </div>
+      <p class="section-note">三张逻辑表按 branch_id 水平划分。下面的行数来自各分站实时统计，检索时不必指定分馆。</p>
+      <div id="catalog-totals" class="metric-row" aria-live="polite"></div>
+      <div class="table-wrap catalog-table-wrap">
+        <table>
+          <thead>
+            <tr><th>站点</th><th>分片条件</th><th>books</th><th>readers</th><th>loans</th><th>在架</th><th>借出</th><th>未归还</th></tr>
+          </thead>
+          <tbody id="catalog-body">
+            <tr><td colspan="8">正在读取分站目录…</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="catalog-sites" class="catalog-grid"></div>
+      <form id="book-search" class="search-bar">
+        <label class="sr-only" for="book-query">跨站检索</label>
+        <input id="book-query" maxlength="40" placeholder="按书名、作者或分类检索，例如：文学" autocomplete="off">
+        <button class="run-button search-button" type="submit">跨站检索</button>
+      </form>
+      <div id="search-meta" class="result-meta"></div>
+      <div id="search-error" class="query-error" role="alert"></div>
+      <div id="search-wrap"></div>
+    </section>
+
+    <section class="query-section" aria-labelledby="query-heading">
+      <div class="section-heading">
+        <div>
+          <span class="section-index">02</span>
           <h2 id="query-heading">逻辑查询</h2>
         </div>
         <span class="subtle-label" id="main-address">主站</span>
       </div>
       <div class="example-row" id="examples" aria-label="示例查询"></div>
+      <div class="history-line">
+        <span class="subtle-label">最近查询</span>
+        <div class="example-row" id="history" aria-label="查询历史"></div>
+      </div>
       <label class="sr-only" for="sql-input">SQL 查询</label>
       <textarea id="sql-input" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="sql-error">SELECT book_id, title, author, status
 FROM books
@@ -45,7 +80,7 @@ LIMIT 8;</textarea>
     <section class="result-section" aria-labelledby="result-heading">
       <div class="section-heading result-heading">
         <div>
-          <span class="section-index">02</span>
+          <span class="section-index">03</span>
           <h2 id="result-heading">查询结果</h2>
         </div>
         <div class="result-meta" id="result-meta">等待查询</div>
@@ -58,7 +93,7 @@ LIMIT 8;</textarea>
     <section class="plan-section" aria-labelledby="plan-heading">
       <div class="section-heading">
         <div>
-          <span class="section-index">03</span>
+          <span class="section-index">04</span>
           <h2 id="plan-heading">分布式执行计划</h2>
         </div>
         <div id="request-label" class="request-label">尚无 request_id</div>

@@ -239,6 +239,50 @@ def test_site_failure_never_returns_partial_results(tmp_path):
     assert body["plan"]["site_subqueries"][-1]["status"] == "error"
 
 
+def test_catalog_search_browse_and_history(tmp_path):
+    settings, transport = setup(tmp_path)
+    site = settings.sites[0]
+    with TestClient(create_shard_app(settings, site.site_id, site.database)) as shard_client:
+        profile = shard_client.get("/api/profile").json()
+        assert profile["books"] == 15
+        assert profile["readers"] == 8
+        assert profile["loans"] == 10
+        assert profile["loaned"] == 5
+        assert profile["predicate"] == "branch_id = 1"
+        browse = shard_client.get("/api/browse", params={"table": "books", "q": "Library"}).json()
+        assert browse["total"] == 2
+        assert {row[1] for row in browse["rows"]} == {site.branch_id}
+        assert shard_client.get("/api/browse", params={"table": "secrets"}).status_code == 400
+    with TestClient(create_main_app(settings, transport)) as main_client:
+        catalog = main_client.get("/api/catalog").json()
+        assert catalog["complete"] is True
+        assert catalog["totals"]["books"] == 45
+        assert [item["site_id"] for item in catalog["sites"]] == ["A", "B", "C"]
+        found = main_client.get("/api/search", params={"q": "Library"})
+        assert found.status_code == 200
+        body = found.json()
+        assert body["matched"] == 6
+        assert {row[0] for row in body["rows"]} == {"A", "B", "C"}
+        assert main_client.get("/api/search", params={"q": "  "}).status_code == 400
+        queried = main_client.post("/api/query", json={"sql": "SELECT COUNT(*) AS total FROM readers"})
+        assert queried.status_code == 200
+        history = main_client.get("/api/history").json()["items"]
+        assert history[0]["sql"].startswith("SELECT COUNT")
+        assert history[0]["status"] == 200
+        assert history[0]["sites"] == ["A", "B", "C"]
+
+
+def test_search_fails_closed_when_a_site_is_down(tmp_path):
+    settings, transport = setup(tmp_path, unavailable="C")
+    with TestClient(create_main_app(settings, transport)) as client:
+        response = client.get("/api/search", params={"q": "Library"})
+        assert response.status_code == 502
+        assert "站点 C" in response.json()["error"]
+        catalog = client.get("/api/catalog").json()
+        assert catalog["complete"] is False
+        assert catalog["sites"][-1]["status"] == "error"
+
+
 def test_main_and_all_shard_http_endpoints_work(tmp_path):
     settings, transport = setup(tmp_path)
     with TestClient(create_main_app(settings, transport)) as main_client:

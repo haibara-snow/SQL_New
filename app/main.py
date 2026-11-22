@@ -4,6 +4,8 @@ import asyncio
 import sqlite3
 import time
 import uuid
+from collections import deque
+from datetime import datetime
 from typing import Any
 
 import httpx
@@ -304,6 +306,8 @@ def create_main_app(
     async def main_home():
         return FileResponse(settings.root / "app" / "web" / "index.html")
 
+    app.state.history = deque(maxlen=20)
+
     @app.get("/api/distribution")
     async def distribution():
         return {
@@ -315,6 +319,109 @@ def create_main_app(
                 for site in settings.sites
             ],
         }
+
+    async def _get_site_json(site, path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+        try:
+            async with httpx.AsyncClient(timeout=settings.request_timeout_seconds, transport=transport) as client:
+                response = await client.get(f"{site.url}{path}", params=params)
+            if response.status_code != 200:
+                try:
+                    detail = response.json().get("detail", response.text)
+                except ValueError:
+                    detail = response.text
+                return {"site_id": site.site_id, "status": "error", "error": f"HTTP {response.status_code}: {detail}"}
+            return {"site_id": site.site_id, "status": "ok", "data": response.json()}
+        except Exception as exc:
+            return {"site_id": site.site_id, "status": "error", "error": str(exc)}
+
+    @app.get("/api/catalog")
+    async def catalog():
+        # 全局目录：分片条件来自配置，行数来自各分站实时统计。单个分站失败时仍返回其余站点。
+        fetched = await asyncio.gather(*(_get_site_json(site, "/api/profile") for site in settings.sites))
+        by_id = {item["site_id"]: item for item in fetched}
+        sites_out = []
+        totals = {"books": 0, "readers": 0, "loans": 0, "available": 0, "loaned": 0, "open_loans": 0}
+        for site in settings.sites:
+            item = by_id[site.site_id]
+            entry = {
+                "site_id": site.site_id,
+                "branch_id": site.branch_id,
+                "url": site.url,
+                "predicate": f"branch_id = {site.branch_id}",
+                "status": item["status"],
+            }
+            if item["status"] != "ok":
+                entry["error"] = item.get("error", "站点不可用")
+                sites_out.append(entry)
+                continue
+            data = item["data"]
+            entry.update({
+                "books": data.get("books", 0),
+                "readers": data.get("readers", 0),
+                "loans": data.get("loans", 0),
+                "available": data.get("available", 0),
+                "loaned": data.get("loaned", 0),
+                "open_loans": data.get("open_loans", 0),
+                "categories": data.get("categories", []),
+            })
+            for key in totals:
+                totals[key] += int(entry[key])
+            sites_out.append(entry)
+        return {
+            "partition_key": "branch_id",
+            "partition_kind": "horizontal",
+            "logical_tables": TABLE_COLUMNS,
+            "complete": all(item["status"] == "ok" for item in sites_out),
+            "totals": totals,
+            "sites": sites_out,
+        }
+
+    @app.get("/api/search")
+    async def search(q: str, limit: int = 30):
+        keyword = q.strip()
+        if not keyword:
+            return JSONResponse({"error": "请输入书名、作者或分类关键字。"}, status_code=400)
+        if len(keyword) > 40:
+            return JSONResponse({"error": "检索关键字不能超过 40 个字符。"}, status_code=400)
+        page_size = min(max(limit, 1), 40)
+        fetched = await asyncio.gather(*(
+            _get_site_json(site, "/api/browse", {"table": "books", "limit": page_size, "q": keyword})
+            for site in settings.sites
+        ))
+        failures = [f"站点 {item['site_id']}: {item.get('error', '不可用')}" for item in fetched if item["status"] != "ok"]
+        if failures:
+            return JSONResponse(
+                {"error": "跨站检索未完成，没有返回部分结果。" + " ".join(failures)},
+                status_code=502,
+            )
+        columns = ["site_id", *TABLE_COLUMNS["books"]]
+        merged: list[list[Any]] = []
+        matched = 0
+        per_site = []
+        for site, item in zip(settings.sites, fetched):
+            data = item["data"]
+            matched += int(data.get("total", 0))
+            per_site.append({"site_id": site.site_id, "branch_id": site.branch_id, "matched": data.get("total", 0)})
+            for row in data.get("rows", []):
+                merged.append([site.site_id, *row])
+        title_at = columns.index("title")
+        branch_at = columns.index("branch_id")
+        book_at = columns.index("book_id")
+        merged.sort(key=lambda row: (row[branch_at], str(row[title_at]), row[book_at]))
+        visible = merged[:page_size]
+        return {
+            "q": keyword,
+            "columns": columns,
+            "rows": visible,
+            "row_count": len(visible),
+            "matched": matched,
+            "truncated": matched > len(visible),
+            "sites": per_site,
+        }
+
+    @app.get("/api/history")
+    async def history():
+        return {"items": list(app.state.history)}
 
     @app.get("/api/health")
     async def health():
@@ -337,6 +444,16 @@ def create_main_app(
     @app.post("/api/query")
     async def query(request: QueryRequest):
         body, status = await execute_query(request.sql, settings, transport)
+        plan = body.get("plan") or {}
+        app.state.history.appendleft({
+            "sql": request.sql,
+            "status": status,
+            "row_count": body.get("row_count"),
+            "sites": plan.get("actual_sites", []),
+            "duration_ms": plan.get("total_duration_ms"),
+            "error": body.get("error"),
+            "at": datetime.now().astimezone().isoformat(timespec="seconds"),
+        })
         return JSONResponse(body, status_code=status)
 
     return app
