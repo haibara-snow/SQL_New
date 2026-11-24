@@ -384,8 +384,14 @@ def create_main_app(
         if len(keyword) > 40:
             return JSONResponse({"error": "检索关键字不能超过 40 个字符。"}, status_code=400)
         page_size = min(max(limit, 1), 40)
+        # Each shard must return its first matches in the same order used for the global limit.
         fetched = await asyncio.gather(*(
-            _get_site_json(site, "/api/browse", {"table": "books", "limit": page_size, "q": keyword})
+            _get_site_json(site, "/api/browse", {
+                "table": "books",
+                "limit": page_size,
+                "q": keyword,
+                "sort_by_title": True,
+            })
             for site in settings.sites
         ))
         failures = [f"站点 {item['site_id']}: {item.get('error', '不可用')}" for item in fetched if item["status"] != "ok"]

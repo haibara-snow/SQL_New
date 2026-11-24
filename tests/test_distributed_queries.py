@@ -252,6 +252,9 @@ def test_catalog_search_browse_and_history(tmp_path):
         browse = shard_client.get("/api/browse", params={"table": "books", "q": "Library"}).json()
         assert browse["total"] == 2
         assert {row[1] for row in browse["rows"]} == {site.branch_id}
+        assert [row[browse["columns"].index("title")] for row in browse["rows"]] == [
+            "The Distributed Library", "Library Architecture",
+        ]
         assert shard_client.get("/api/browse", params={"table": "secrets"}).status_code == 400
     with TestClient(create_main_app(settings, transport)) as main_client:
         catalog = main_client.get("/api/catalog").json()
@@ -270,6 +273,20 @@ def test_catalog_search_browse_and_history(tmp_path):
         assert history[0]["sql"].startswith("SELECT COUNT")
         assert history[0]["status"] == 200
         assert history[0]["sites"] == ["A", "B", "C"]
+
+
+def test_search_sorts_matches_before_applying_the_limit(tmp_path):
+    settings, transport = setup(tmp_path)
+    with TestClient(create_main_app(settings, transport)) as client:
+        full_response = client.get("/api/search", params={"q": "Library"})
+        limited_response = client.get("/api/search", params={"q": "Library", "limit": 1})
+        assert full_response.status_code == limited_response.status_code == 200
+        full = full_response.json()
+        limited = limited_response.json()
+        assert limited["rows"] == full["rows"][:1]
+        assert limited["rows"][0][limited["columns"].index("title")] == "Library Architecture"
+        assert limited["matched"] == full["matched"] == 6
+        assert limited["truncated"] is True
 
 
 def test_search_fails_closed_when_a_site_is_down(tmp_path):

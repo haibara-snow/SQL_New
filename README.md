@@ -1,6 +1,6 @@
 # 分布式图书馆数据库
 
-Python 3、FastAPI、SQLite、sqlglot 和 httpx 实现的分布式数据库课程设计。主站提供逻辑 SQL 网关和查询计划页面，三个独立分站各自运行服务并只保存本分馆的数据。
+Python 3、FastAPI、SQLite、sqlglot 和 httpx 实现的分布式数据库课程设计。主站提供分片目录、跨站图书检索和 SQL 查询计划。三个独立分站各自保存本分馆的数据，并提供本地表浏览和请求事件。
 
 ## 架构
 
@@ -30,6 +30,16 @@ loans(loan_id, branch_id, book_id, reader_id, loan_date, return_date)
 
 需要 Python 3.10 或更新版本。
 
+Windows PowerShell
+
+```powershell
+py -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe run.py
+```
+
+macOS 或 Linux
+
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
@@ -51,6 +61,12 @@ python run.py --init-only
 - 分站 C：http://127.0.0.1:8003/
 
 主站点“单站裁剪 · B”后执行，可在 B 页面看到相同 request_id 的查询事件。再运行“跨站点连接”或“三站汇总”，比较主站计划中的站点、子查询及全局合并过程。配置修改后，`config/sites.json` 的端口、URL 与数据库路径用于服务启动和站点发现；跨电脑部署时将相应分站 URL 改为可访问地址，并修改其监听 host。
+
+## 馆藏检索与浏览
+
+- 主站的分片目录显示各分馆的图书、读者和借阅统计。点击分馆可进入该站页面。
+- 跨站图书检索支持书名、作者和分类等关键词。结果按分馆编号、书名和图书编号排序，界面同时显示匹配总数。
+- 分站页面支持切换图书、读者和借阅表，按关键字过滤并分页浏览。
 
 ## 初始化与测试
 

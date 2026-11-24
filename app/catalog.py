@@ -61,10 +61,20 @@ def local_profile(database: Path) -> dict[str, Any]:
         connection.close()
 
 
-def browse_table(database: Path, table: str, limit: int, offset: int, q: str) -> dict[str, Any]:
+def browse_table(
+    database: Path,
+    table: str,
+    limit: int,
+    offset: int,
+    q: str,
+    *,
+    sort_by_title: bool = False,
+) -> dict[str, Any]:
     """按白名单读取本站一张表，可选关键字过滤，供分站页面分页浏览。"""
     if table not in TABLE_COLUMNS:
         raise BrowseError(f"Unknown table: {table}")
+    if sort_by_title and table != "books":
+        raise BrowseError("Only books can be sorted by title")
     if limit < 1 or limit > MAX_BROWSE_LIMIT:
         raise BrowseError(f"limit must be between 1 and {MAX_BROWSE_LIMIT}")
     if offset < 0 or offset > 100000:
@@ -84,7 +94,7 @@ def browse_table(database: Path, table: str, limit: int, offset: int, q: str) ->
             params.append(int(keyword))
         where = " WHERE " + " OR ".join(clauses)
 
-    order_by = PRIMARY_KEYS[table]
+    order_by = "title, book_id" if sort_by_title else PRIMARY_KEYS[table]
     connection = connect_readonly(database)
     try:
         total = int(connection.execute(f"SELECT COUNT(*) FROM {table}{where}", params).fetchone()[0])

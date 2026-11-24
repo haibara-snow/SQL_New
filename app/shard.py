@@ -125,9 +125,13 @@ def create_shard_app(
         }
 
     @app.get("/api/browse")
-    async def browse(table: str, limit: int = 12, offset: int = 0, q: str = ""):
+    async def browse(
+        table: str, limit: int = 12, offset: int = 0, q: str = "", sort_by_title: bool = False,
+    ):
         try:
-            return await asyncio.to_thread(browse_table, database, table, limit, offset, q)
+            return await asyncio.to_thread(
+                browse_table, database, table, limit, offset, q, sort_by_title=sort_by_title,
+            )
         except BrowseError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         except Exception as exc:
